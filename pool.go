@@ -35,3 +35,9 @@ func New(opts ...Option) *Pool {
 		maxWorkerRestarts: int64(cfg.maxWorkerRestarts),
 	}
 }
+
+func (p *Pool) Run() {}
+
+func (p *Pool) workerLoop() {}
+
+func (p *Pool) Stop() {}
