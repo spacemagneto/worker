@@ -1,6 +1,7 @@
 package worker
 
 import (
+	"context"
 	"runtime"
 )
 
@@ -12,6 +13,7 @@ type config struct {
 	workers           int
 	queueSize         int
 	maxWorkerRestarts int
+	context           context.Context
 }
 
 func defaultConfig() config {
@@ -21,6 +23,7 @@ func defaultConfig() config {
 		workers:           defWorkerCount,
 		queueSize:         defWorkerCount * 2,
 		maxWorkerRestarts: DefaultMaxWorkerRestarts,
+		context:           context.Background(),
 	}
 }
 
