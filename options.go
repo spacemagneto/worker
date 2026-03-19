@@ -29,3 +29,9 @@ func WithWorkers(n int) Option {
 		cfg.workers = n
 	}
 }
+
+func WithQueueSize(n int) Option {
+	return func(cfg *config) {
+		cfg.queueSize = n
+	}
+}
