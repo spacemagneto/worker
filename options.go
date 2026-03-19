@@ -35,3 +35,9 @@ func WithQueueSize(n int) Option {
 		cfg.queueSize = n
 	}
 }
+
+func WithMaxWorkerRestarts(n int) Option {
+	return func(cfg *config) {
+		cfg.maxWorkerRestarts = n
+	}
+}
