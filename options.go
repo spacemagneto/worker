@@ -44,3 +44,9 @@ func WithMaxWorkerRestarts(n int) Option {
 		cfg.maxWorkerRestarts = n
 	}
 }
+
+func WithContext(ctx context.Context) Option {
+	return func(cfg *config) {
+		cfg.context = ctx
+	}
+}
