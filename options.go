@@ -6,8 +6,10 @@ import (
 
 const DefaultMaxWorkerRestarts = 3
 
+type Option func(*config)
+
 type config struct {
-	workerCount       int
+	workers           int
 	queueSize         int
 	maxWorkerRestarts int
 }
@@ -16,8 +18,14 @@ func defaultConfig() config {
 	defWorkerCount := runtime.NumCPU()
 
 	return config{
-		workerCount:       defWorkerCount,
+		workers:           defWorkerCount,
 		queueSize:         defWorkerCount * 2,
 		maxWorkerRestarts: DefaultMaxWorkerRestarts,
+	}
+}
+
+func WithWorkers(n int) Option {
+	return func(cfg *config) {
+		cfg.workers = n
 	}
 }
