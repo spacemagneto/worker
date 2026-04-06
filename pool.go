@@ -6,38 +6,41 @@ import (
 	"sync/atomic"
 )
 
-type Pool struct {
+type Func[T any] func(context.Context, T)
+
+type FuncError[T any] func(context.Context, T) error
+
+type FuncWithResult[T, R any] func(context.Context, T) (R, error)
+
+type Pool[T, R any] struct {
 	ctx               context.Context
 	contextCancelFunc context.CancelFunc
 
-	taskCh chan any
+	jobQueue chan job[T, R]
 
-	maxWorkerRestarts int64
+	processingFunc FuncWithResult[T, R]
+
+	workers int
+
+	maxRetryWorkerRestart int32
+
+	parentContextHook func() bool
+
+	onceStart sync.Once
+
+	workerWg sync.WaitGroup
 
 	isStop atomic.Bool
-	wg     sync.WaitGroup
 }
 
-func New(opts ...Option) *Pool {
-	cfg := defaultConfig()
+func (p *Pool[T, R]) Run() {}
 
-	for _, opt := range opts {
-		if opt != nil {
-			opt(&cfg)
-		}
-	}
-
-	ctx, cancel := context.WithCancel(cfg.context)
-	return &Pool{
-		ctx:               ctx,
-		contextCancelFunc: cancel,
-		taskCh:            make(chan any),
-		maxWorkerRestarts: int64(cfg.maxWorkerRestarts),
-	}
+func (p *Pool[T, R]) AddJob(data T) error {
+	return nil
 }
 
-func (p *Pool) Run() {}
+func (p *Pool[T, R]) AddJobWithResult(data T) (*ProcessingResult[R], error) {
+	return nil, nil
+}
 
-func (p *Pool) workerLoop() {}
-
-func (p *Pool) Stop() {}
+func (p *Pool[T, R]) Stop() {}
