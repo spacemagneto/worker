@@ -9,3 +9,9 @@ type ProcessingResult[R any] struct {
 
 	onceDone sync.Once
 }
+
+func newProcessingResult[R any]() *ProcessingResult[R] {
+	return &ProcessingResult[R]{
+		doneCh: make(chan struct{}, 1),
+	}
+}
