@@ -7,41 +7,41 @@ import (
 
 const DefaultMaxWorkerRestarts = 3
 
-type Option func(*config)
-
 type config struct {
+	context           context.Context
 	workers           int
 	queueSize         int
 	maxWorkerRestarts int
-	context           context.Context
 }
+
+type Option func(*config)
 
 func defaultConfig() config {
-	defWorkerCount := runtime.NumCPU()
+	defaultWorkerCount := runtime.NumCPU()
 
 	return config{
-		workers:           defWorkerCount,
-		queueSize:         defWorkerCount * 2,
-		maxWorkerRestarts: DefaultMaxWorkerRestarts,
 		context:           context.Background(),
+		workers:           defaultWorkerCount,
+		queueSize:         defaultWorkerCount * 2,
+		maxWorkerRestarts: DefaultMaxWorkerRestarts,
 	}
 }
 
-func WithWorkers(n int) Option {
+func WithWorkers(workers int) Option {
 	return func(cfg *config) {
-		cfg.workers = n
+		cfg.workers = workers
 	}
 }
 
-func WithQueueSize(n int) Option {
+func WithQueueSize(size int) Option {
 	return func(cfg *config) {
-		cfg.queueSize = n
+		cfg.queueSize = size
 	}
 }
 
-func WithMaxWorkerRestarts(n int) Option {
+func WithMaxWorkerRestarts(maxRestarts int) Option {
 	return func(cfg *config) {
-		cfg.maxWorkerRestarts = n
+		cfg.maxWorkerRestarts = maxRestarts
 	}
 }
 
