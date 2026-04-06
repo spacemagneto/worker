@@ -1,6 +1,9 @@
 package worker
 
-import "fmt"
+import (
+	"fmt"
+	"runtime/debug"
+)
 
 type PanicError struct {
 	Err             any
@@ -24,4 +27,12 @@ func (p *PanicError) Unwrap() error {
 	}
 
 	return nil
+}
+
+func GetRecoverError(rec any) error {
+	if rec == nil {
+		return nil
+	}
+
+	return &PanicError{Err: rec, PanicStackTrace: debug.Stack()}
 }
