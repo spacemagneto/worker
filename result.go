@@ -15,3 +15,7 @@ func newProcessingResult[R any]() *ProcessingResult[R] {
 		doneCh: make(chan struct{}, 1),
 	}
 }
+
+func (p *ProcessingResult[R]) ProcessingIsDone() <-chan struct{} {
+	return p.doneCh
+}
