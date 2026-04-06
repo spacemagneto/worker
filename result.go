@@ -16,6 +16,14 @@ func newProcessingResult[R any]() *ProcessingResult[R] {
 	}
 }
 
+func (p *ProcessingResult[R]) processingDone(res R, err error) {
+	p.onceDone.Do(func() {
+		p.processingRes = res
+		p.processingErr = err
+		close(p.doneCh)
+	})
+}
+
 func (p *ProcessingResult[R]) ProcessingIsDone() <-chan struct{} {
 	return p.doneCh
 }
