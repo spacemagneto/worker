@@ -17,3 +17,11 @@ func (p *PanicError) Error() string {
 	// We will also use the `recover stack trace` to understand what might have caused this behavior.
 	return fmt.Sprintf("worker panic recover error: %v", p.Err)
 }
+
+func (p *PanicError) Unwrap() error {
+	if err, ok := p.Err.(error); ok {
+		return err
+	}
+
+	return nil
+}
