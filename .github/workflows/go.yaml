@@ -1,0 +1,40 @@
+name: Test
+on: [push, pull_request]
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Required for golangci-lint to analyze changes
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.x' # Match test-cache for consistency
+          cache: true # Cache Go modules
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v8
+        with:
+          version: v2.11.3 # Latest stable v2 release as of May 2025
+          only-new-issues: true # Show only new issues on PRs
+
+  test-nocache:
+    name: Test (No Cache)
+    strategy:
+      matrix:
+        go-version: [1.23.x, 1.24.x]
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go-version }}
+          cache: false
+      - run: go test ./...
