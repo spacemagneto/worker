@@ -1,9 +1,12 @@
 package worker
 
 import (
+	"errors"
 	"fmt"
 	"runtime/debug"
 )
+
+var ErrPoolStopped = errors.New("worker pool is stopped")
 
 type PanicError struct {
 	Err             any
