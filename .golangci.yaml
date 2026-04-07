@@ -1,0 +1,115 @@
+version: "2"
+run:
+  concurrency: 4
+  modules-download-mode: readonly
+  issues-exit-code: 1
+  tests: false
+  allow-parallel-runners: false
+linters:
+  disable-all: true
+  enable:
+    - asasalint
+    - asciicheck
+    - bidichk
+    - bodyclose
+    - copyloopvar
+    - dupl
+    - durationcheck
+    - errname
+    - errorlint
+    - gocritic
+    - gocyclo
+    - nakedret
+    - nilerr
+    - prealloc
+    - reassign
+    - unconvert
+    - unparam
+    - usestdlibvars
+    - wastedassign
+    - staticcheck
+  settings:
+    copyloopvar:
+      check-alias: true
+    dupl:
+      threshold: 300
+    gocritic:
+      disabled-checks:
+        - hugeParam
+        - rangeExprCopy
+        - rangeValCopy
+      enabled-tags:
+        - diagnostic
+        - experimental
+        - opinionated
+        - performance
+        - style
+    gosec:
+      excludes:
+        - G109
+        - G112
+        - G114
+        - G115
+        - G204
+        - G301
+        - G501
+    misspell:
+      locale: US
+    errcheck:
+      exclude-functions:
+        - (*os.File).Close
+        - io.Closer.Close
+        - (io.Closer).Close
+        - (*io.PipeWriter).Close
+
+    revive:
+      confidence: 0.8
+      severity: warning
+      rules:
+        - name: exported
+          disabled: true
+        - name: package-comments
+          severity: warning
+          disabled: true
+        - name: exported
+          arguments:
+            - checkPrivateReceivers
+            - disableStutteringCheck
+          severity: warning
+          disabled: false
+  exclusions:
+    generated: lax
+    rules:
+      - linters:
+          - staticcheck
+        text: at least one file in a package should have a package comment
+      - linters:
+          - dupl
+          - gosec
+        path: _test\.go
+    paths:
+      - vendor
+      - test
+      - e2e
+      - docker
+      - third_party$
+      - builtin$
+      - examples$
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  uniq-by-line: false
+  new: false
+  fix: false
+formatters:
+  enable:
+    - gofmt
+    - gofumpt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/spacemagneto/worker
+  exclusions:
+    generated: lax
+    paths:
