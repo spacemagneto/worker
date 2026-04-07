@@ -52,4 +52,19 @@ func (p *Pool[T, R]) AddJobWithResult(data T) (*ProcessingResult[R], error) {
 	return nil, nil
 }
 
+func (p *Pool[T, R]) submit(data T, res *ProcessingResult[R]) error {
+	if p.isStop.Load() {
+		return ErrPoolStopped
+	}
+
+	select {
+	// TODO: add job options for timeout and error handler
+	case p.jobQueue <- job[T, R]{data: data, jobResult: res}:
+		return nil
+
+	case <-p.ctx.Done():
+		return p.ctx.Err()
+	}
+}
+
 func (p *Pool[T, R]) Stop() {}
