@@ -58,7 +58,11 @@ func (w *worker[T, R]) workerLoop() (isRestart bool, err error) {
 	for {
 		select {
 		case <-w.parentCtx.Done():
-			// TODO: need close all result processing channels
+			// To prevent open channels that are waiting for a task to complete from leaking,
+			// if context is closed (worker pool is stopped),
+			// a method will be called that forces an empty result but closes channel
+			w.cancelAllJob()
+
 			return
 
 		case newJob, ok := <-w.jobCh:
@@ -97,6 +101,21 @@ func (w *worker[T, R]) jobProcessing(j job[T, R]) {
 	if err != nil {
 		if j.errorFunc != nil {
 			j.errorFunc(err)
+		}
+	}
+}
+
+func (w *worker[T, R]) cancelAllJob() {
+	for {
+		select {
+		case j := <-w.jobCh:
+			if j.jobResult != nil {
+				var zero R
+				j.jobResult.processingDone(zero, w.parentCtx.Err())
+			}
+
+		default:
+			return
 		}
 	}
 }
