@@ -67,4 +67,14 @@ func (p *Pool[T, R]) submit(data T, res *ProcessingResult[R]) error {
 	}
 }
 
-func (p *Pool[T, R]) Stop() {}
+func (p *Pool[T, R]) Stop() {
+	if !p.isStop.Swap(true) {
+		if p.parentContextHook != nil {
+			p.parentContextHook()
+		}
+
+		p.contextCancelFunc()
+	}
+
+	p.workerWg.Wait()
+}
