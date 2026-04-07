@@ -3,6 +3,7 @@ package worker
 import (
 	"context"
 	"runtime"
+	"time"
 )
 
 const DefaultMaxWorkerRestarts = 3
@@ -48,5 +49,24 @@ func WithMaxWorkerRestarts(maxRestarts int) Option {
 func WithContext(ctx context.Context) Option {
 	return func(cfg *config) {
 		cfg.context = ctx
+	}
+}
+
+type jobOptions struct {
+	timeout   time.Duration
+	errorFunc func(error)
+}
+
+type JobOptions func(*jobOptions)
+
+func WithTimeout(timeout time.Duration) JobOptions {
+	return func(options *jobOptions) {
+		options.timeout = timeout
+	}
+}
+
+func WithErrorFunc(fn func(err error)) JobOptions {
+	return func(options *jobOptions) {
+		options.errorFunc = fn
 	}
 }
