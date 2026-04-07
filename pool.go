@@ -33,7 +33,16 @@ type Pool[T, R any] struct {
 	isStop atomic.Bool
 }
 
-func (p *Pool[T, R]) Run() {}
+func (p *Pool[T, R]) Run() {
+	p.onceStart.Do(func() {
+		for index := range p.workers {
+			wr := newWorker[T, R](p.ctx, index, p.processingFunc, p.jobQueue, p.maxRetryWorkerRestart)
+
+			p.workerWg.Add(1)
+			go wr.start(&p.workerWg)
+		}
+	})
+}
 
 func (p *Pool[T, R]) AddJob(data T) error {
 	return nil
