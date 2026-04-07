@@ -44,12 +44,17 @@ func (p *Pool[T, R]) Run() {
 	})
 }
 
-func (p *Pool[T, R]) AddJob(data T) error {
-	return nil
+func (p *Pool[T, R]) AddJob(data T, opts ...JobOptions) error {
+	return p.submit(data, nil, opts...)
 }
 
-func (p *Pool[T, R]) AddJobWithResult(data T) (*ProcessingResult[R], error) {
-	return nil, nil
+func (p *Pool[T, R]) AddJobWithResult(data T, opts ...JobOptions) (*ProcessingResult[R], error) {
+	res := newProcessingResult[R]()
+	if err := p.submit(data, res, opts...); err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }
 
 func (p *Pool[T, R]) submit(data T, res *ProcessingResult[R], opts ...JobOptions) error {
