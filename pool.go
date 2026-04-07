@@ -52,14 +52,21 @@ func (p *Pool[T, R]) AddJobWithResult(data T) (*ProcessingResult[R], error) {
 	return nil, nil
 }
 
-func (p *Pool[T, R]) submit(data T, res *ProcessingResult[R]) error {
+func (p *Pool[T, R]) submit(data T, res *ProcessingResult[R], opts ...JobOptions) error {
 	if p.isStop.Load() {
 		return ErrPoolStopped
 	}
 
+	var options jobOptions
+
+	for _, opt := range opts {
+		if opt != nil {
+			opt(&options)
+		}
+	}
+
 	select {
-	// TODO: add job options for timeout and error handler
-	case p.jobQueue <- job[T, R]{data: data, jobResult: res}:
+	case p.jobQueue <- job[T, R]{data: data, jobResult: res, errorFunc: options.errorFunc, timeout: options.timeout}:
 		return nil
 
 	case <-p.ctx.Done():
