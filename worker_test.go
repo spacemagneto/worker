@@ -158,3 +158,63 @@ func TestJobWithErrorFunc(t *testing.T) {
 
 	wg.Wait()
 }
+
+func TestWorkerProcessingWithTimeout(t *testing.T) {
+	t.Parallel()
+
+	t.Run("JobCompletesWithinTimeout", func(t *testing.T) {
+		processingFunc := func(ctx context.Context, n int) (int, error) {
+			select {
+			case <-ctx.Done():
+				return 0, ctx.Err()
+
+			case <-time.After(350 * time.Millisecond):
+				return 100, nil
+			}
+		}
+
+		pool, err := NewResult(processingFunc, WithWorkers(1), WithQueueSize(2))
+		assert.NoError(t, err, "Expected no error when creating the pool instance")
+
+		pool.Run()
+
+		processingResult, err := pool.AddJobWithResult(5, WithTimeout(250*time.Millisecond))
+		assert.NoError(t, err, "Expected the job to be successfully added to the pool with a custom timeout")
+
+		result, jobErr := processingResult.WaitResult(context.Background())
+
+		assert.Error(t, jobErr, "Expected an error because the job processing should exceed the specified timeout")
+		assert.ErrorIs(t, jobErr, context.DeadlineExceeded, "Expected the error to specifically be context.DeadlineExceeded")
+		assert.Equal(t, 0, result, "Expected the result to be the zero value (0) when a timeout occurs")
+
+		pool.Stop()
+	})
+
+	t.Run("JobExceedsTimeout", func(t *testing.T) {
+		processingFunc := func(ctx context.Context, _ int) (int, error) {
+			select {
+			case <-ctx.Done():
+				return 0, ctx.Err()
+
+			case <-time.After(time.Minute):
+				return 0, nil
+			}
+		}
+
+		pool, err := NewResult(processingFunc, WithWorkers(1), WithQueueSize(2))
+		assert.NoError(t, err, "Expected no error when initializing the pool with a single worker")
+
+		pool.Run()
+
+		result, err := pool.AddJobWithResult(1, WithTimeout(20*time.Millisecond))
+		assert.NoError(t, err, "Expected the job to be accepted by the pool with the specified timeout option")
+
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+
+		_, jobErr := result.WaitResult(ctx)
+		assert.ErrorIs(t, jobErr, context.DeadlineExceeded, "Expected the job error to be context.DeadlineExceeded due to the job-specific timeout")
+
+		pool.Stop()
+	})
+}
