@@ -227,3 +227,30 @@ func TestWorkerPoolProcessingWithPanicRecovery(t *testing.T) {
 
 	pool.Stop()
 }
+
+func TestContextCancelStopsPool(t *testing.T) {
+	defer goleak.VerifyNone(t)
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	pool, err := NewFuncWithError(func(_ context.Context, _ int) error {
+		return nil
+	}, WithContext(ctx), WithWorkers(2), WithQueueSize(4))
+	assert.NoError(t, err, "Expected no error when creating pool with a cancelable context")
+	assert.NotNil(t, pool, "Expected pool instance to be successfully initialized")
+
+	pool.Run()
+
+	expectedCount := 10
+
+	for index := range expectedCount {
+		err = pool.AddJob(expectedCount)
+		assert.NoError(t, err, fmt.Sprintf("Expected job %d to be accepted by pool", index))
+	}
+
+	cancel()
+
+	pool.Stop()
+
+	assert.True(t, pool.isStop.Load(), "Expected pool state to be marked as stopped after context cancellation and Stop call")
+}
