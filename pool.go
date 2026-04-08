@@ -50,6 +50,17 @@ func NewFunc[T any](processingFunc Func[T], opts ...Option) (*Pool[T, struct{}],
 	}, opts...)
 }
 
+func NewBaseFunc(processingFunc BaseFunc, opts ...Option) (*Pool[any, struct{}], error) {
+	if processingFunc == nil {
+		return nil, ErrProcessingFuncIsEmpty
+	}
+
+	return NewResult(func(ctx context.Context, _ any) (struct{}, error) {
+		processingFunc(ctx)
+		return struct{}{}, nil
+	}, opts...)
+}
+
 func NewFuncWithError[T any](processingFunc FuncError[T], opts ...Option) (*Pool[T, struct{}], error) {
 	if processingFunc == nil {
 		return nil, ErrProcessingFuncIsEmpty
