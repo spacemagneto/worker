@@ -2,6 +2,7 @@ package worker
 
 import (
 	"context"
+	"log/slog"
 	"sync"
 	"sync/atomic"
 )
@@ -31,6 +32,8 @@ type Pool[T, R any] struct {
 	workerWg sync.WaitGroup
 
 	isStop atomic.Bool
+
+	logger *slog.Logger
 }
 
 func (p *Pool[T, R]) Run() {
