@@ -2,6 +2,7 @@ package worker
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -115,4 +116,45 @@ func TestCancelAllJob(t *testing.T) {
 			t.Errorf("Expected ProcessingIsDone channel for job %d to be closed after cancelAllJob call", index)
 		}
 	}
+}
+
+func TestJobWithErrorFunc(t *testing.T) {
+	jobCh := make(chan job[int, int], 1)
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	sentinelErr := errors.New("failed processing")
+	processingFunc := func(_ context.Context, n int) (int, error) {
+		return 0, sentinelErr
+	}
+
+	wr := newWorker(ctx, 1, processingFunc, jobCh, 3, slog.New(slog.NewJSONHandler(os.Stderr, nil)))
+	res := newProcessingResult[int]()
+
+	var wg sync.WaitGroup
+
+	wg.Add(1)
+	go wr.start(&wg)
+
+	errSignal := make(chan error, 1)
+	expectedErrorFunc := func(err error) { errSignal <- err }
+
+	jobCh <- job[int, int]{data: 10, jobResult: res, errorFunc: expectedErrorFunc}
+
+	result, err := res.WaitResult(ctx)
+
+	var capturedErr error
+	select {
+	case capturedErr = <-errSignal:
+		assert.Error(t, err, "Expected processing error to be returned from WaitResult")
+		assert.ErrorIs(t, capturedErr, sentinelErr, "Expected the error passed to errorFunc to match the sentinel error")
+		assert.Equal(t, 0, result, "Expected result to be zero value on error")
+
+	case <-time.After(1 * time.Second):
+		t.Fatal("Expected errorFunc to be called, but timed out")
+	}
+
+	cancel()
+
+	wg.Wait()
 }
