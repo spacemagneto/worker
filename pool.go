@@ -7,6 +7,9 @@ import (
 	"sync/atomic"
 )
 
+// TODO: rename this!
+type BaseFunc func(ctx context.Context)
+
 type Func[T any] func(context.Context, T)
 
 type FuncError[T any] func(context.Context, T) error
