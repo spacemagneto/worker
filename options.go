@@ -2,6 +2,8 @@ package worker
 
 import (
 	"context"
+	"log/slog"
+	"os"
 	"runtime"
 	"time"
 )
@@ -13,6 +15,7 @@ type config struct {
 	workers           int
 	queueSize         int
 	maxWorkerRestarts int
+	logger            *slog.Logger
 }
 
 type Option func(*config)
@@ -25,6 +28,8 @@ func defaultConfig() config {
 		workers:           defaultWorkerCount,
 		queueSize:         defaultWorkerCount * 2,
 		maxWorkerRestarts: DefaultMaxWorkerRestarts,
+		// TODO: Actually, what about the options? Should we leave them as they are or add some new ones?
+		logger: slog.New(slog.NewJSONHandler(os.Stdout, nil)),
 	}
 }
 
@@ -49,6 +54,12 @@ func WithMaxWorkerRestarts(maxRestarts int) Option {
 func WithContext(ctx context.Context) Option {
 	return func(cfg *config) {
 		cfg.context = ctx
+	}
+}
+
+func WithLogger(logger *slog.Logger) Option {
+	return func(c *config) {
+		c.logger = logger
 	}
 }
 
