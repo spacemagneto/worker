@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/goleak"
 )
 
 func TestPool(t *testing.T) {
@@ -154,4 +155,48 @@ func TestPool(t *testing.T) {
 
 		pool.Stop()
 	})
+}
+
+func TestPoolSuccessProcessingWithGoLeaks(t *testing.T) {
+	defer goleak.VerifyNone(t)
+
+	processingCounter := 20
+	var jobCounter atomic.Int32
+
+	processingFunc := func(context.Context, struct{}) error {
+		jobCounter.Add(1)
+		return nil
+	}
+
+	pool, err := NewFuncWithError(processingFunc, WithWorkers(4), WithQueueSize(10))
+	assert.NoError(t, err, "Expected no error when creating pool with a cancelable context")
+	assert.NotNil(t, pool, "Expected pool instance to be successfully initialized")
+	assert.False(t, pool.isStop.Load(), "Pool should not be marked as stopped initially")
+
+	pool.Run()
+	pool.Run()
+
+	resultList := make([]*ProcessingResult[struct{}], 0, processingCounter)
+
+	for index := range processingCounter {
+		res, jobErr := pool.AddJobWithResult(struct{}{})
+		assert.NoError(t, jobErr, fmt.Sprintf("Expected job %d to be accepted by pool", index))
+
+		resultList = append(resultList, res)
+	}
+
+	for _, res := range resultList {
+		select {
+		case _, ok := <-res.ProcessingIsDone():
+			assert.False(t, ok, "Expected done channel to be closed, indicating result processing completion")
+
+		case <-time.After(150 * time.Millisecond):
+			t.Error("Result processing did not done within the expected time")
+		}
+	}
+
+	pool.Stop()
+
+	assert.Equal(t, int32(processingCounter), jobCounter.Load(), "Expected number of processed jobs to exactly match number of submitted jobs")
+	assert.True(t, pool.isStop.Load(), "Expected pool state to be marked as stopped after calling Stop()")
 }
