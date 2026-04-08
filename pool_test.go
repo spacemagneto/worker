@@ -155,6 +155,40 @@ func TestPool(t *testing.T) {
 
 		pool.Stop()
 	})
+
+	t.Run("SuccessJobProcessingWithBaseFunc", func(t *testing.T) {
+		processingCounter := 10
+		var jobCounter atomic.Int32
+
+		processingFunc := func(context.Context) {
+			jobCounter.Add(1)
+		}
+
+		pool, err := NewBaseFunc(processingFunc, WithWorkers(4), WithQueueSize(10))
+		assert.NoError(t, err, "Expected no error when creating a pool with a valid processing function")
+		assert.NotNil(t, pool, "Expected pool instance to be successfully initialized")
+		assert.False(t, pool.isStop.Load(), "Expected pool to be in an active (not stopped) state upon initialization")
+
+		pool.Run()
+
+		for index := range processingCounter {
+			err = pool.AddJob("")
+			assert.NoError(t, err, fmt.Sprintf("Expected job at index %d to be accepted by the pool", index))
+		}
+
+		time.Sleep(100 * time.Millisecond)
+
+		pool.Stop()
+
+		assert.Equal(t, int32(processingCounter), jobCounter.Load(), "Expected final job count to exactly match number of submitted tasks")
+		assert.True(t, pool.isStop.Load(), "Expected pool's internal state to be marked as stopped after calling Stop()")
+	})
+
+	t.Run("NewBaseFuncWithEmptyFunc", func(t *testing.T) {
+		pool, err := NewBaseFunc(nil, WithWorkers(4), WithQueueSize(10))
+		assert.Nil(t, pool, "Expected pool to be nil when an empty processing function is provided")
+		assert.ErrorIs(t, err, ErrProcessingFuncIsEmpty, "Expected ErrProcessingFuncIsEmpty when NewBaseFunc constructor receives a nil function")
+	})
 }
 
 func TestPoolSuccessProcessingWithGoLeaks(t *testing.T) {
