@@ -6,7 +6,11 @@ import (
 	"runtime/debug"
 )
 
-var ErrPoolStopped = errors.New("worker pool is stopped")
+var (
+	ErrProcessingFuncIsEmpty = errors.New("processing func is empty")
+
+	ErrPoolStopped = errors.New("worker pool is stopped")
+)
 
 type PanicError struct {
 	Err             any
