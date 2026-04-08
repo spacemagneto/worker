@@ -78,3 +78,41 @@ func TestWorker(t *testing.T) {
 		wg.Wait()
 	})
 }
+
+func TestCancelAllJob(t *testing.T) {
+	expectedSize := 10
+	jobCh := make(chan job[int, int], expectedSize)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	processingFunc := func(_ context.Context, n int) (int, error) { return n * 2, nil }
+
+	wr := newWorker(ctx, 1, processingFunc, jobCh, 3, slog.New(slog.NewJSONHandler(os.Stderr, nil)))
+
+	processingList := make([]*ProcessingResult[int], 0, expectedSize)
+
+	for range expectedSize {
+		result := newProcessingResult[int]()
+		processingList = append(processingList, result)
+
+		jobCh <- job[int, int]{data: 1, jobResult: result}
+	}
+
+	wr.cancelAllJob()
+
+	for index, result := range processingList {
+		res, err := result.WaitResult(ctx)
+
+		assert.Error(t, err, fmt.Sprintf("Expected an error for job %d because pool was stopped", index))
+		assert.ErrorIs(t, err, context.Canceled, fmt.Sprintf("Expected error for job %d to be context.Canceled", index))
+		assert.NotNil(t, res, fmt.Sprintf("Expected result for job %d to be zero value of type, not nil", index))
+
+		select {
+		case _, ok := <-result.ProcessingIsDone():
+			assert.False(t, ok, fmt.Sprintf("Expected done channel for job %d to be closed, indicating result processing completion", index))
+		default:
+			t.Errorf("Expected ProcessingIsDone channel for job %d to be closed after cancelAllJob call", index)
+		}
+	}
+}
