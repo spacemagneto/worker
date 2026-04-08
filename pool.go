@@ -42,7 +42,7 @@ type Pool[T, R any] struct {
 func (p *Pool[T, R]) Run() {
 	p.onceStart.Do(func() {
 		for index := range p.workers {
-			wr := newWorker[T, R](p.ctx, index, p.processingFunc, p.jobQueue, p.maxRetryWorkerRestart)
+			wr := newWorker[T, R](p.ctx, index, p.processingFunc, p.jobQueue, p.maxRetryWorkerRestart, p.logger)
 
 			p.workerWg.Add(1)
 			go wr.start(&p.workerWg)
@@ -65,6 +65,7 @@ func (p *Pool[T, R]) AddJobWithResult(data T, opts ...JobOptions) (*ProcessingRe
 
 func (p *Pool[T, R]) submit(data T, res *ProcessingResult[R], opts ...JobOptions) error {
 	if p.isStop.Load() {
+		p.logger.Error("pool is close")
 		return ErrPoolStopped
 	}
 
@@ -81,6 +82,7 @@ func (p *Pool[T, R]) submit(data T, res *ProcessingResult[R], opts ...JobOptions
 		return nil
 
 	case <-p.ctx.Done():
+		p.logger.Error("context is done", "error", p.ctx.Err())
 		return p.ctx.Err()
 	}
 }
