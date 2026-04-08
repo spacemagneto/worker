@@ -200,3 +200,30 @@ func TestPoolSuccessProcessingWithGoLeaks(t *testing.T) {
 	assert.Equal(t, int32(processingCounter), jobCounter.Load(), "Expected number of processed jobs to exactly match number of submitted jobs")
 	assert.True(t, pool.isStop.Load(), "Expected pool state to be marked as stopped after calling Stop()")
 }
+
+func TestWorkerPoolProcessingWithPanicRecovery(t *testing.T) {
+	defer goleak.VerifyNone(t)
+
+	processingFunc := func(_ context.Context, _ int) (int, error) {
+		panic("unexpected panic inside job")
+	}
+
+	pool, err := NewResult(processingFunc, WithWorkers(1), WithQueueSize(2))
+	assert.NoError(t, err, "Expected no error when initializing pool with a panic-prone function")
+
+	pool.Run()
+
+	processingResult, err := pool.AddJobWithResult(1)
+	assert.NoError(t, err, "Expected job to be successfully accepted by pool despite potential panic")
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	_, jobErr := processingResult.WaitResult(ctx)
+	assert.Error(t, jobErr, "Expected an error to be returned when processing function panics")
+
+	var panicErr *PanicError
+	assert.ErrorAs(t, jobErr, &panicErr, "Expected job error to be of type *PanicError")
+
+	pool.Stop()
+}
