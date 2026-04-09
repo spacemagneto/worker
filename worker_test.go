@@ -173,7 +173,7 @@ func TestWorkerProcessingWithTimeout(t *testing.T) {
 			}
 		}
 
-		pool, err := NewProcessor(processingFunc, WithWorkers(1), WithQueueSize(2))
+		pool, err := New(processingFunc, WithWorkers(1), WithQueueSize(2))
 		assert.NoError(t, err, "Expected no error when creating the pool instance")
 
 		pool.Run()
@@ -201,7 +201,7 @@ func TestWorkerProcessingWithTimeout(t *testing.T) {
 			}
 		}
 
-		pool, err := NewProcessor(processingFunc, WithWorkers(1), WithQueueSize(2))
+		pool, err := New(processingFunc, WithWorkers(1), WithQueueSize(2))
 		assert.NoError(t, err, "Expected no error when initializing the pool with a single worker")
 
 		pool.Run()
@@ -217,4 +217,40 @@ func TestWorkerProcessingWithTimeout(t *testing.T) {
 
 		pool.Stop()
 	})
+}
+
+func TestTaskPanicCapturedByErrorFunc(t *testing.T) {
+	t.Parallel()
+
+	processingFunc := func(_ context.Context) {
+		panic("processing panic")
+	}
+
+	pool, err := NewTaskPool(processingFunc, WithWorkers(1), WithQueueSize(2))
+	assert.NoError(t, err, "Expected no error when creating the pool instance")
+
+	pool.Run()
+
+	errCh := make(chan error, 1)
+
+	errorFunc := func(jobErr error) {
+		errCh <- jobErr
+	}
+
+	err = pool.AddJob(nil, WithErrorFunc(errorFunc))
+	assert.NoError(t, err)
+
+	select {
+	case received := <-errCh:
+		var panicErr *PanicError
+
+		assert.ErrorAs(t, received, &panicErr, "Expected the captured error to be of type *PanicError")
+		assert.NotNil(t, panicErr.PanicStackTrace, "Expected the panic stack trace to be captured and not nil")
+		assert.Contains(t, panicErr.Error(), "processing panic", "Expected the error message to contain the original panic string")
+
+	case <-time.After(3 * time.Second):
+		t.Fatal("Timeout: WithErrorFunc was never called after the worker encountered a panic")
+	}
+
+	pool.Stop()
 }
