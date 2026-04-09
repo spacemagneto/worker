@@ -7,14 +7,13 @@ import (
 	"sync/atomic"
 )
 
-// TODO: rename this!
-type BaseFunc func(ctx context.Context)
+type Task func(ctx context.Context)
 
-type Func[T any] func(context.Context, T)
+type Handler[T any] func(context.Context, T)
 
-type FuncError[T any] func(context.Context, T) error
+type ErrHandler[T any] func(context.Context, T) error
 
-type FuncWithResult[T, R any] func(context.Context, T) (R, error)
+type Processor[T, R any] func(context.Context, T) (R, error)
 
 type Pool[T, R any] struct {
 	ctx               context.Context
@@ -22,7 +21,7 @@ type Pool[T, R any] struct {
 
 	jobQueue chan job[T, R]
 
-	processingFunc FuncWithResult[T, R]
+	processingFunc Processor[T, R]
 
 	workers int
 
@@ -39,40 +38,40 @@ type Pool[T, R any] struct {
 	logger *slog.Logger
 }
 
-func NewFunc[T any](processingFunc Func[T], opts ...Option) (*Pool[T, struct{}], error) {
-	if processingFunc == nil {
+func NewTask(handler Task, opts ...Option) (*Pool[any, struct{}], error) {
+	if handler == nil {
 		return nil, ErrProcessingFuncIsEmpty
 	}
 
-	return NewResult(func(ctx context.Context, input T) (struct{}, error) {
-		processingFunc(ctx, input)
+	return NewProcessor(func(ctx context.Context, _ any) (struct{}, error) {
+		handler(ctx)
 		return struct{}{}, nil
 	}, opts...)
 }
 
-func NewBaseFunc(processingFunc BaseFunc, opts ...Option) (*Pool[any, struct{}], error) {
-	if processingFunc == nil {
+func NewHandler[T any](handler Handler[T], opts ...Option) (*Pool[T, struct{}], error) {
+	if handler == nil {
 		return nil, ErrProcessingFuncIsEmpty
 	}
 
-	return NewResult(func(ctx context.Context, _ any) (struct{}, error) {
-		processingFunc(ctx)
+	return NewProcessor(func(ctx context.Context, input T) (struct{}, error) {
+		handler(ctx, input)
 		return struct{}{}, nil
 	}, opts...)
 }
 
-func NewFuncWithError[T any](processingFunc FuncError[T], opts ...Option) (*Pool[T, struct{}], error) {
-	if processingFunc == nil {
+func NewErrHandler[T any](handler ErrHandler[T], opts ...Option) (*Pool[T, struct{}], error) {
+	if handler == nil {
 		return nil, ErrProcessingFuncIsEmpty
 	}
 
-	return NewResult(func(ctx context.Context, input T) (struct{}, error) {
-		return struct{}{}, processingFunc(ctx, input)
+	return NewProcessor(func(ctx context.Context, input T) (struct{}, error) {
+		return struct{}{}, handler(ctx, input)
 	}, opts...)
 }
 
-func NewResult[T, R any](processingFunc FuncWithResult[T, R], opts ...Option) (*Pool[T, R], error) {
-	if processingFunc == nil {
+func NewProcessor[T, R any](handler Processor[T, R], opts ...Option) (*Pool[T, R], error) {
+	if handler == nil {
 		return nil, ErrProcessingFuncIsEmpty
 	}
 
@@ -91,7 +90,7 @@ func NewResult[T, R any](processingFunc FuncWithResult[T, R], opts ...Option) (*
 		contextCancelFunc:     cancel,
 		workers:               cfg.workers,
 		jobQueue:              make(chan job[T, R], cfg.queueSize),
-		processingFunc:        processingFunc,
+		processingFunc:        handler,
 		maxRetryWorkerRestart: int32(cfg.maxWorkerRestarts),
 		logger:                cfg.logger,
 	}

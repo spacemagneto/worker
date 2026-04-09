@@ -173,7 +173,7 @@ func TestWorkerProcessingWithTimeout(t *testing.T) {
 			}
 		}
 
-		pool, err := NewResult(processingFunc, WithWorkers(1), WithQueueSize(2))
+		pool, err := NewProcessor(processingFunc, WithWorkers(1), WithQueueSize(2))
 		assert.NoError(t, err, "Expected no error when creating the pool instance")
 
 		pool.Run()
@@ -201,7 +201,7 @@ func TestWorkerProcessingWithTimeout(t *testing.T) {
 			}
 		}
 
-		pool, err := NewResult(processingFunc, WithWorkers(1), WithQueueSize(2))
+		pool, err := NewProcessor(processingFunc, WithWorkers(1), WithQueueSize(2))
 		assert.NoError(t, err, "Expected no error when initializing the pool with a single worker")
 
 		pool.Run()

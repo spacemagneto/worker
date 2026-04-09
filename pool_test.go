@@ -15,21 +15,21 @@ func TestPool(t *testing.T) {
 	t.Parallel()
 
 	t.Run("NewFuncWithEmptyProcessingFunc", func(t *testing.T) {
-		pool, err := NewFunc[any](nil)
+		pool, err := NewHandler[any](nil)
 		assert.Nil(t, pool, "Expected the pool to be nil when an empty processing function is provided")
-		assert.ErrorIs(t, err, ErrProcessingFuncIsEmpty, "Expected ErrProcessingFuncIsEmpty when the NewFunc constructor receives a nil function")
+		assert.ErrorIs(t, err, ErrProcessingFuncIsEmpty, "Expected ErrProcessingFuncIsEmpty when the NewHandler constructor receives a nil function")
 	})
 
 	t.Run("NewFuncWithErrorWithEmptyProcessingFunc", func(t *testing.T) {
-		pool, err := NewFuncWithError[any](nil)
+		pool, err := NewErrHandler[any](nil)
 		assert.Nil(t, pool, "Expected the pool to be nil when an empty processing function is provided")
-		assert.ErrorIs(t, err, ErrProcessingFuncIsEmpty, "Expected ErrProcessingFuncIsEmpty when the NewFuncWithError constructor receives a nil function")
+		assert.ErrorIs(t, err, ErrProcessingFuncIsEmpty, "Expected ErrProcessingFuncIsEmpty when the NewErrHandler constructor receives a nil function")
 	})
 
 	t.Run("NewResultWithEmptyProcessingFunc", func(t *testing.T) {
-		pool, err := NewResult[any, any](nil)
+		pool, err := NewProcessor[any, any](nil)
 		assert.Nil(t, pool, "Expected the pool to be nil when an empty processing function is provided")
-		assert.ErrorIs(t, err, ErrProcessingFuncIsEmpty, "Expected ErrProcessingFuncIsEmpty when the NewResult constructor receives a nil function")
+		assert.ErrorIs(t, err, ErrProcessingFuncIsEmpty, "Expected ErrProcessingFuncIsEmpty when the NewProcessor constructor receives a nil function")
 	})
 
 	t.Run("SuccessJobProcessing", func(t *testing.T) {
@@ -41,7 +41,7 @@ func TestPool(t *testing.T) {
 			return nil
 		}
 
-		pool, err := NewFuncWithError(processingFunc, WithWorkers(4), WithQueueSize(10))
+		pool, err := NewErrHandler(processingFunc, WithWorkers(4), WithQueueSize(10))
 		assert.NoError(t, err, "Expected no error when creating a pool with a valid processing function")
 		assert.NotNil(t, pool, "Expected pool instance to be successfully initialized")
 		assert.False(t, pool.isStop.Load(), "Expected pool to be in an active (not stopped) state upon initialization")
@@ -78,7 +78,7 @@ func TestPool(t *testing.T) {
 			return n * 2, nil
 		}
 
-		pool, err := NewResult(processingFunc, WithWorkers(4), WithQueueSize(10))
+		pool, err := NewProcessor(processingFunc, WithWorkers(4), WithQueueSize(10))
 		assert.NoError(t, err, "Expected no error when creating a new pool with valid options")
 		assert.NotNil(t, pool, "Expected pool instance to be initialized and not nil")
 
@@ -105,7 +105,7 @@ func TestPool(t *testing.T) {
 	t.Run("AddJobAndContextDone", func(t *testing.T) {
 		processingFunc := func(context.Context, int) { return }
 
-		pool, err := NewFunc(processingFunc, WithWorkers(1), WithQueueSize(1))
+		pool, err := NewHandler(processingFunc, WithWorkers(1), WithQueueSize(1))
 		assert.NoError(t, err, "Expected no error when creating a pool with a valid processing function")
 		assert.NotNil(t, pool, "Expected pool instance to be successfully initialized")
 		assert.False(t, pool.isStop.Load(), "Expected pool to be in an active (not stopped) state upon initialization")
@@ -129,7 +129,7 @@ func TestPool(t *testing.T) {
 			return n, nil
 		}
 
-		pool, err := NewResult(processingFunc, WithWorkers(1), WithQueueSize(1))
+		pool, err := NewProcessor(processingFunc, WithWorkers(1), WithQueueSize(1))
 		assert.NoError(t, err, "Expected no error when creating a new pool with valid options")
 		assert.NotNil(t, pool, "Expected pool instance to be initialized and not nil")
 
@@ -164,7 +164,7 @@ func TestPool(t *testing.T) {
 			jobCounter.Add(1)
 		}
 
-		pool, err := NewBaseFunc(processingFunc, WithWorkers(4), WithQueueSize(10))
+		pool, err := NewTask(processingFunc, WithWorkers(4), WithQueueSize(10))
 		assert.NoError(t, err, "Expected no error when creating a pool with a valid processing function")
 		assert.NotNil(t, pool, "Expected pool instance to be successfully initialized")
 		assert.False(t, pool.isStop.Load(), "Expected pool to be in an active (not stopped) state upon initialization")
@@ -185,9 +185,9 @@ func TestPool(t *testing.T) {
 	})
 
 	t.Run("NewBaseFuncWithEmptyFunc", func(t *testing.T) {
-		pool, err := NewBaseFunc(nil, WithWorkers(4), WithQueueSize(10))
+		pool, err := NewTask(nil, WithWorkers(4), WithQueueSize(10))
 		assert.Nil(t, pool, "Expected pool to be nil when an empty processing function is provided")
-		assert.ErrorIs(t, err, ErrProcessingFuncIsEmpty, "Expected ErrProcessingFuncIsEmpty when NewBaseFunc constructor receives a nil function")
+		assert.ErrorIs(t, err, ErrProcessingFuncIsEmpty, "Expected ErrProcessingFuncIsEmpty when NewTask constructor receives a nil function")
 	})
 }
 
@@ -202,7 +202,7 @@ func TestPoolSuccessProcessingWithGoLeaks(t *testing.T) {
 		return nil
 	}
 
-	pool, err := NewFuncWithError(processingFunc, WithWorkers(4), WithQueueSize(10))
+	pool, err := NewErrHandler(processingFunc, WithWorkers(4), WithQueueSize(10))
 	assert.NoError(t, err, "Expected no error when creating pool with a cancelable context")
 	assert.NotNil(t, pool, "Expected pool instance to be successfully initialized")
 	assert.False(t, pool.isStop.Load(), "Pool should not be marked as stopped initially")
@@ -242,7 +242,7 @@ func TestWorkerPoolProcessingWithPanicRecovery(t *testing.T) {
 		panic("unexpected panic inside job")
 	}
 
-	pool, err := NewResult(processingFunc, WithWorkers(1), WithQueueSize(2))
+	pool, err := NewProcessor(processingFunc, WithWorkers(1), WithQueueSize(2))
 	assert.NoError(t, err, "Expected no error when initializing pool with a panic-prone function")
 
 	pool.Run()
@@ -267,7 +267,7 @@ func TestContextCancelStopsPool(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	pool, err := NewFuncWithError(func(_ context.Context, _ int) error {
+	pool, err := NewErrHandler(func(_ context.Context, _ int) error {
 		return nil
 	}, WithContext(ctx), WithWorkers(2), WithQueueSize(4))
 	assert.NoError(t, err, "Expected no error when creating pool with a cancelable context")

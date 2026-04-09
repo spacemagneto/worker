@@ -11,7 +11,7 @@ import (
 type worker[T, R any] struct {
 	parentCtx             context.Context
 	id                    string
-	processingFunc        FuncWithResult[T, R]
+	processingFunc        Processor[T, R]
 	jobCh                 <-chan job[T, R]
 	maxRetryWorkerRestart int32
 	restartCounter        atomic.Int32
@@ -19,7 +19,7 @@ type worker[T, R any] struct {
 	logger *slog.Logger
 }
 
-func newWorker[T, R any](ctx context.Context, index int, processingFunc FuncWithResult[T, R], jobCh <-chan job[T, R], maxRetryWorkerRestart int32, logger *slog.Logger) *worker[T, R] {
+func newWorker[T, R any](ctx context.Context, index int, processingFunc Processor[T, R], jobCh <-chan job[T, R], maxRetryWorkerRestart int32, logger *slog.Logger) *worker[T, R] {
 	return &worker[T, R]{
 		parentCtx:             ctx,
 		id:                    fmt.Sprintf("worker::%d", index),
