@@ -6,7 +6,7 @@ run:
   tests: false
   allow-parallel-runners: false
 linters:
-  disable-all: true
+  default: none
   enable:
     - asasalint
     - asciicheck
