@@ -1,3 +1,6 @@
+[![codecov](https://codecov.io/gh/spacemagneto/worker/graph/badge.svg?token=X5AROBKZA1)](https://codecov.io/gh/spacemagneto/worker)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+
 # worker
 
 A generic, lock-free, type-safe worker pool for Go with panic recovery, job timeouts, optional result tracking, and configurable restart logic.
