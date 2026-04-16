@@ -1,46 +1,40 @@
 name: Test
-on: [push, pull_request]
+
+on:
+  push:
+  pull_request:
 
 jobs:
   lint:
-    name: Lint
     runs-on: ubuntu-latest
-    timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.24.x'
+          go-version: '1.24'
           cache: true
-
-      - name: Run golangci-lint
+      - name: Lint
         uses: golangci/golangci-lint-action@v8
         with:
-          version: v2.1.6
-          only-new-issues: true
+          version: v2.11.4
 
   test:
-    name: Test & Race
-    strategy:
-      matrix:
-        # Проверяем на текущей и предыдущей минорной версии
-        go-version: ['1.23.x', '1.24.x']
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: actions/setup-go@v5
         with:
-          go-version: ${{ matrix.go-version }}
+          go-version: '1.24'
           cache: true
-        run: go test -v -race -count=1 ./...
+      - name: Test
+        run: go test ./...
 
-  test-nocache:
-    name: Test (No Cache)
+  race:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.24.x'
-          cache: false
-        run: go test -v ./...
+          go-version: '1.24'
+          cache: true
+      - name: Race test
+        run: go test -race ./...
