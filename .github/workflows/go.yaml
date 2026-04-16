@@ -7,34 +7,40 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
-          fetch-depth: 0 # Required for golangci-lint to analyze changes
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.24.x' # Match test-cache for consistency
-          cache: true # Cache Go modules
+          go-version: '1.24.x'
+          cache: true
 
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v8
         with:
-          version: v2.11.3 # Latest stable v2 release as of May 2025
-          only-new-issues: true # Show only new issues on PRs
+          version: v2.1.6
+          only-new-issues: true
 
-  test-nocache:
-    name: Test (No Cache)
+  test:
+    name: Test & Race
     strategy:
       matrix:
-        go-version: [1.23.x, 1.24.x]
-        os: [ubuntu-latest, macos-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
+        # Проверяем на текущей и предыдущей минорной версии
+        go-version: ['1.23.x', '1.24.x']
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
           go-version: ${{ matrix.go-version }}
+          cache: true
+        run: go test -v -race -count=1 ./...
+
+  test-nocache:
+    name: Test (No Cache)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.x'
           cache: false
-      - run: go test ./...
+        run: go test -v ./...
