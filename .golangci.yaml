@@ -6,12 +6,12 @@ run:
   tests: false
   allow-parallel-runners: false
 linters:
-  default: none
   enable:
     - asasalint
     - asciicheck
     - bidichk
     - bodyclose
+    - contextcheck
     - copyloopvar
     - dupl
     - durationcheck
@@ -19,15 +19,18 @@ linters:
     - errorlint
     - gocritic
     - gocyclo
+    - gosec
     - nakedret
     - nilerr
+    - nilnil
+    - noctx
     - prealloc
     - reassign
+    - staticcheck
     - unconvert
     - unparam
     - usestdlibvars
     - wastedassign
-    - staticcheck
   settings:
     copyloopvar:
       check-alias: true
@@ -46,22 +49,12 @@ linters:
         - style
     gosec:
       excludes:
-        - G109
-        - G112
         - G114
         - G115
-        - G204
+        - G118
         - G301
-        - G501
     misspell:
       locale: US
-    errcheck:
-      exclude-functions:
-        - (*os.File).Close
-        - io.Closer.Close
-        - (io.Closer).Close
-        - (*io.PipeWriter).Close
-
     revive:
       confidence: 0.8
       severity: warning
@@ -110,6 +103,3 @@ formatters:
     goimports:
       local-prefixes:
         - github.com/spacemagneto/worker
-  exclusions:
-    generated: lax
-    paths:
